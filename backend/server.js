@@ -23,7 +23,7 @@ const corsOption = {
 
 app.use(cors(corsOption));
 app.use('/auth', authRoutes);
-app.use('/api/rooms', roomRoutes);
+app.use('/rooms', roomRoutes);
 app.use('/code', codeRoutes);
 
 initSocket(server);

@@ -1,12 +1,64 @@
-# React + Vite
+# CoCode Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend for the collaborative code editor, now structured with dedicated layers for:
 
-Currently, two official plugins are available:
+- `api` (HTTP/socket clients)
+- `services` (API operations)
+- `hooks` (stateful UI logic)
+- `app` (routing bootstrap)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Updated Structure
 
-## Expanding the ESLint configuration
+```text
+src/
+	app/
+		router.jsx
+	api/
+		client.js
+		socket.js
+	auth/
+		Login.jsx
+		Signup.jsx
+	components/
+		...
+	constants/
+		storageKeys.js
+	hooks/
+		useAuth.js
+		useCurrentUser.js
+		useRooms.js
+		useSocketRoom.js
+	Pages/
+		Home.jsx
+		JoinRoom.jsx
+		CodeEditor.jsx
+	services/
+		ai.service.js
+		auth.service.js
+		code.service.js
+		file.service.js
+		room.service.js
+		token.service.js
+		user.service.js
+	utils/
+		validation.js
+```
 
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Environment
+
+Create `.env` from `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Set:
+
+- `VITE_GEMINI_API_KEY`
+
+## Run
+
+```bash
+npm install
+npm run dev
+```

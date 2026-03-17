@@ -1,180 +1,124 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import io from "socket.io-client";
 import { Code } from "@/components/Code.jsx";
 import { OutputConsole } from "@/components/Output.jsx";
 import { Sidebar } from "@/components/Sidebar";
-
-const socket = io.connect("http://localhost:3000");
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useSocketRoom } from "@/hooks/useSocketRoom";
+import { fileService } from "@/services/file.service";
+import { getApiErrorMessage } from "@/api/client";
+import { toast } from "react-toastify";
 
 export const CodeEditor = () => {
-  const { roomId } = useParams();
-  const [code, setCode] = useState("// Write your code here...");
-  const [language, setLanguage] = useState("javascript");
-  const [messages, setMessages] = useState([]);
-  const [message, setMessage] = useState("");
-  const [activeFile, setActiveFile] = useState("");
-  const [user, setUser] = useState(null);
+    const { roomId } = useParams();
+    const [code, setCode] = useState("// Write your code here...");
+    const [language, setLanguage] = useState("javascript");
+    const [message, setMessage] = useState("");
+    const [activeFile, setActiveFile] = useState("");
+    const { user } = useCurrentUser();
+    const { messages, sendMessage, emitCodeUpdate, listenCodeUpdates } =
+        useSocketRoom(roomId, activeFile);
 
-  const activeFileRef = useRef(activeFile); 
+    useEffect(() => {
+        const unsubscribe = listenCodeUpdates(setCode);
+        return unsubscribe;
+    }, [listenCodeUpdates]);
 
-  useEffect(() => {
-    activeFileRef.current = activeFile; 
-  }, [activeFile]);
+    const handleCodeChange = (newCode) => {
+        setCode(newCode);
+        emitCodeUpdate(newCode);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
-        return;
-      }
-
-      try {
-        const decoded = JSON.parse(atob(token.split(".")[1]));
-        console.log("Decoded token:", decoded); 
-
-        const userId = decoded.id; 
-        if (!userId) {
-          console.error("User ID not found in token");
-          return;
+        if (activeFile) {
+            fileService.updateFile(activeFile, newCode).catch((error) => {
+                toast.error(getApiErrorMessage(error, "Error updating file"));
+            });
         }
-
-        const response = await fetch(`http://localhost:3000/auth/user/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`, 
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch user data");
-        }
-
-        const userData = await response.json();
-        console.log("Fetched User Data:", userData); 
-        setUser(userData); 
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
     };
 
-    fetchUserData();
-  }, []);
-
-
-  useEffect(() => {
-    socket.emit("joinRoom", roomId);
-
-    socket.on("previousMessages", (oldMessages) => {
-      setMessages(oldMessages);
-    });
-
-    socket.on("receivedmessage", (newMessage) => {
-      setMessages((prev) => [...prev, newMessage]);
-    });
-
-    socket.on("changeCode", (newC, incomingFile) => {
-      if(activeFileRef.current === incomingFile){
-        setCode(newC);
-      }
-    });
-
-    return () => {
-      socket.off("previousMessages");
-      socket.off("receivedmessage");
-      socket.off("changeCode");
+    const handleSendButton = () => {
+        if (message.trim() && user) {
+            sendMessage({
+                roomId,
+                username: user.username,
+                message,
+            });
+            setMessage("");
+        }
     };
-  }, [roomId]);
 
-  const handleCodeChange = (newCode) => {
-    setCode(newCode);
-    socket.emit("codeUpdate", { roomId, newCode, activeFile: activeFileRef.current }); // Ensure latest activeFile is sent
-
-    // Send a request to update the database
-    if (activeFileRef.current) {
-      fetch(`http://localhost:3000/api/rooms/file/update/${activeFileRef.current}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newCode }),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (!data.success) {
-            console.error("Error updating file in database:", data.message);
-          }
-        })
-        .catch((error) => console.error("Error updating file:", error));
-    }
-  };
-
-  const handleSendButton = () => {
-    if (message.trim() && user) {
-      socket.emit("send_message", { roomId, username: user.username, message });
-      setMessage("");
-    }
-  };
-
-
-  return (
-    <div className="flex h-screen bg-zinc-900 overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar
-        roomId={roomId}
-        setCode={setCode}
-        handleCodeChange={handleCodeChange}
-        code={code}
-        language={language}
-        activeFile={activeFile}
-        setActiveFile={setActiveFile}
-      />
-
-      {/* Code Editor + Output Section */}
-      <div className="flex flex-col flex-1 min-w-0">
-        <div className="flex-1 h-64 overflow-auto">
-          <Code code={code} setCode={handleCodeChange} language={language} setLanguage={setLanguage} />
-        </div>
-
-        <div className="h-64 p-3">
-          <OutputConsole code={code} language={language} />
-        </div>
-      </div>
-
-      {/* Chat Box */}
-      <div className="w-80 border-l border-gray-700 bg-zinc-900 flex flex-col">
-        <div className="p-4 border-b border-gray-700">
-          <h2 className="text-lg text-white font-semibold">💬 ChatBox</h2>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto bg-zinc-800 p-3">
-          {messages.map((msg, index) => (
-            <div key={index} className="text-white text-sm mb-2 break-words">
-              <span className="text-blue-400 font-semibold">{msg.username}:</span>{" "}
-              <span className="text-gray-200">{msg.message}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Chat Input */}
-        <div className="p-3 border-t border-gray-700 bg-zinc-900">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              className="flex-1 p-2 bg-zinc-800 text-white rounded border border-gray-600 focus:outline-none focus:border-blue-500"
-              placeholder="Type a message..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendButton()}
+    return (
+        <div className="flex h-screen bg-zinc-900 overflow-hidden">
+            {/* Sidebar */}
+            <Sidebar
+                roomId={roomId}
+                setCode={setCode}
+                code={code}
+                language={language}
+                activeFile={activeFile}
+                setActiveFile={setActiveFile}
             />
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleSendButton}
-              disabled={!user}
-            >
-              Send
-            </button>
-          </div>
+
+            {/* Code Editor + Output Section */}
+            <div className="flex flex-col flex-1 min-w-0">
+                <div className="flex-1 h-64 overflow-auto">
+                    <Code
+                        code={code}
+                        setCode={handleCodeChange}
+                        language={language}
+                        setLanguage={setLanguage}
+                    />
+                </div>
+
+                <div className="h-64 p-3">
+                    <OutputConsole code={code} language={language} />
+                </div>
+            </div>
+
+            {/* Chat Box */}
+            <div className="w-80 border-l border-gray-700 bg-zinc-900 flex flex-col">
+                <div className="p-4 border-b border-gray-700">
+                    <h2 className="text-lg text-white font-semibold">
+                        💬 ChatBox
+                    </h2>
+                </div>
+
+                <div className="flex-1 overflow-y-auto bg-zinc-800 p-3">
+                    {messages.map((msg, index) => (
+                        <div
+                            key={index}
+                            className="text-white text-sm mb-2 break-words"
+                        >
+                            <span className="text-blue-400 font-semibold">
+                                {msg.username}:
+                            </span>{" "}
+                            <span className="text-gray-200">{msg.message}</span>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Chat Input */}
+                <div className="p-3 border-t border-gray-700 bg-zinc-900">
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            className="flex-1 p-2 bg-zinc-800 text-white rounded border border-gray-600 focus:outline-none focus:border-blue-500"
+                            placeholder="Type a message..."
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            onKeyDown={(e) =>
+                                e.key === "Enter" && handleSendButton()
+                            }
+                        />
+                        <button
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={handleSendButton}
+                            disabled={!user}
+                        >
+                            Send
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
