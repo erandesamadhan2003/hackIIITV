@@ -17,7 +17,7 @@ const server = createServer(app);
 app.use(express.json());
 
 const corsOption = {
-  origin: `*`,
+  origin: "*",
   credentials: true,
 };
 
