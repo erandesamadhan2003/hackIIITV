@@ -18,7 +18,7 @@ app.use(express.json());
 
 const corsOption = {
   origin: "*",
-  credentials: true,
+  // credentials: true,
 };
 
 app.use(cors(corsOption));
