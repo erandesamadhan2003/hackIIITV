@@ -11,23 +11,23 @@
     "dev": "nodemon server.js"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.8.2"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "^3.0.3",
     "child_process": "^1.0.2",
-    "cloudinary": "^2.6.0",
+    "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^5.1.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^5.2.1",
     "http": "^0.0.1-security",
-    "jsonwebtoken": "^9.0.2",
+    "jsonwebtoken": "^9.0.3",
     "jwa": "^2.0.1",
-    "jws": "^4.0.0",
-    "mongoose": "^8.13.1",
-    "nodemon": "^3.1.9",
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
+    "jws": "^4.0.1",
+    "mongoose": "^8.23.1",
+    "nodemon": "^3.1.14",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   }
 }
