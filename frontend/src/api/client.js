@@ -2,7 +2,7 @@ import axios from "axios";
 import { tokenService } from "@/services/token.service";
 
 export const apiClient = axios.create({
-    baseURL: "https://hackiiitv.onrender.com/api",
+    baseURL: "https://hackiiitv.onrender.com/",
     withCredentials: true,
     headers: {
         "Content-Type": "application/json",
